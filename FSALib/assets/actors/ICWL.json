@@ -1,0 +1,66 @@
+{
+  "name": "Ice Wall",
+  "description": "An ice block that can be melted with fire.",
+  "InternalName": "氷の壁",
+  "category": "Object",
+  "NoGBASprite": true,
+  "fields": [
+    {
+      "name": "Unknown Variable 3",
+      "description": "An unknown value related to the ice wall.",
+      "bitOffset": 8,
+      "bitSize": 8,
+      "valueType": "Enum",
+      "enumValues": {
+        "0": { "name": "Empty", "description": "" },
+        "1": {
+          "name": "Ice Wizrobe",
+          "description": "A Ice Wizrobe."
+        },
+        "2": {
+          "name": "Green Force Crystal (100)",
+          "description": "A green force crystal with a value of 100."
+        },
+        "3": {
+          "name": "Blue Soldier",
+          "description": "A Blue soldier."
+        },
+        "4": { "name": "Pengator", "description": "A pengator." },
+        "5": { "name": "Force Fairy", "description": "A force fairy." },
+        "6": {
+          "name": "Heart Container",
+          "description": "Increases max health."
+        },
+        "7": {
+          "name": "Force Luck Hole",
+          "description": "A hole that triggers a force luck event."
+        },
+        "8": { "name": "Heart", "description": "A heart item." }
+      }
+    },
+    {
+      "name": "Ice Wall Size",
+      "description": "The size of the ice wall.",
+      "bitOffset": 0,
+      "bitSize": 4,
+      "valueType": "Enum",
+      "enumValues": {
+        "0": { "name": "Big", "description": "A big ice wall." },
+        "1": { "name": "Small", "description": "A small ice wall." }
+      }
+    },
+    {
+      "name": "Extra Flag",
+      "description": "",
+      "bitOffset": 4,
+      "bitSize": 4,
+      "valueType": "Flags",
+      "enumValues": {
+        "1": {
+          "name": "Secret SE",
+          "description": "Plays Secret SE"
+        }
+      }
+    }
+  ]
+}

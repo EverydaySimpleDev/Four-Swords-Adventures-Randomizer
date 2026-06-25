@@ -1,0 +1,36 @@
+{
+  "name": "ViewMode",
+  "description": "Switches the game to side view.",
+  "InternalName": "ＶｉｅｗＭｏｄｅ",
+  "category": "Property",
+  "fields": [
+    {
+      "name": "View Mode",
+      "description": "Determines whether the game is in top view or side view.",
+      "bitOffset": 8,
+      "bitSize": 8,
+      "valueType": "Flags",
+      "enumValues": {
+        "2": {
+          "name": "Light controlle",
+          "description": "Makes the room bright when enabled."
+        },
+        "8": {
+          "name": "Top view?",
+          "description": "The standard top-down perspective."
+        },
+        "16": {
+          "name": "Side view?",
+          "description": "The game switches to a side-scrolling perspective."
+        }
+      }
+    },
+    {
+      "name": "Activation Variable",
+      "description": "The local variable number that triggers or activates this actor if Variable 2 indicates this.",
+      "bitOffset": 27,
+      "bitSize": 5,
+      "valueType": "Integer"
+    }
+  ]
+}

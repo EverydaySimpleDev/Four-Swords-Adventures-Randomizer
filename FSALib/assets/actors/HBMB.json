@@ -1,0 +1,26 @@
+{
+  "name": "Bomb",
+  "description": "A bomb or a bomb flower in the game.",
+  "InternalName": "爆弾",
+  "category": "Item",
+  "fields": [
+    {
+      "name": "Unknown Variable",
+      "description": "An unknown value related to the bomb.",
+      "bitOffset": 8,
+      "bitSize": 16,
+      "valueType": "Integer"
+    },
+    {
+      "name": "Bomb Type",
+      "description": "The type of bomb or item associated with the actor.",
+      "bitOffset": 0,
+      "bitSize": 8,
+      "valueType": "Enum",
+      "enumValues": {
+        "0": { "name": "Bomb", "description": "A standard bomb." },
+        "1": { "name": "Bomb Flower", "description": "A bomb flower." }
+      }
+    }
+  ]
+}

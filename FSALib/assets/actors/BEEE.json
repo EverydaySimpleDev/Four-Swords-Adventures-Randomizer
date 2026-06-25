@@ -1,0 +1,28 @@
+{
+  "name": "Bee",
+  "description": "A bee that is triggered by a local variable.",
+  "category": "Object",
+  "InternalName": "蜂",
+  "fields": [
+    {
+      "name": "Activation Variable",
+      "description": "The local variable number that triggers or activates this actor.",
+      "bitOffset": 27,
+      "bitSize": 5,
+      "valueType": "Integer"
+    },
+    {
+      "name": "Type Flags",
+      "description": "Determines how the Bee behaves.",
+      "bitOffset": 0,
+      "bitSize": 8,
+      "valueType": "Flags",
+      "enumValues": {
+        "1": {
+          "name": "?",
+          "description": "?"
+        }
+      }
+    }
+  ]
+}

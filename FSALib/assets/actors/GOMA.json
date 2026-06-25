@@ -1,0 +1,26 @@
+{
+  "name": "Gohma",
+  "description": "A Miniboss fight against Gohma, with different movement patterns.",
+  "InternalName": "ゴーマ",
+  "category": "Enemy",
+  "NoGBASprite": true,
+  "fields": [
+    {
+      "name": "Gohma State",
+      "description": "The current state or behavior of Gohma.",
+      "bitOffset": 0,
+      "bitSize": 2,
+      "valueType": "Flags",
+      "enumValues": {
+        "1": {
+          "name": "Walking Sideways",
+          "description": "Gohma is walking sideways."
+        },
+        "2": {
+          "name": "Miniboss",
+          "description": "Gohma is in the Miniboss fight state."
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+<Window x:Class="FSARandomizer.AddActorDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add Actor"
+        Width="380" Height="320"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource BgDark}">
+    <StackPanel Margin="16">
+        <TextBlock Text="Add New Actor" Foreground="{StaticResource Accent}"
+                   FontWeight="SemiBold" FontSize="14" Margin="0,0,0,16"/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+                <RowDefinition Height="36"/>
+            </Grid.RowDefinitions>
+
+            <Label Grid.Row="0" Grid.Column="0" Content="Actor ID (4 chars):" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="0" Grid.Column="1" x:Name="IdBox" Text="TKRA" MaxLength="4" VerticalAlignment="Center"/>
+
+            <Label Grid.Row="1" Grid.Column="0" Content="Layer:" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="1" Grid.Column="1" x:Name="LayerBox" Text="0" VerticalAlignment="Center"/>
+
+            <Label Grid.Row="2" Grid.Column="0" Content="X:" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="2" Grid.Column="1" x:Name="XBox" Text="16" VerticalAlignment="Center"/>
+
+            <Label Grid.Row="3" Grid.Column="0" Content="Y:" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="3" Grid.Column="1" x:Name="YBox" Text="16" VerticalAlignment="Center"/>
+
+            <Label Grid.Row="4" Grid.Column="0" Content="Variable (hex):" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="4" Grid.Column="1" x:Name="VarBox" Text="0x00000010" VerticalAlignment="Center"
+                     ToolTip="4-byte hex value e.g. 0x00000010 for a Small Key chest"/>
+
+            <Label Grid.Row="5" Grid.Column="0" Content="Quick preset:" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="5" Grid.Column="1" x:Name="PresetCombo"
+                      VerticalAlignment="Center"
+                      SelectionChanged="PresetCombo_SelectionChanged">
+                <ComboBoxItem Content="Treasure Chest – Small Key"   Tag="TKRA|0|16|16|0x00000010"/>
+                <ComboBoxItem Content="Treasure Chest – Boots"       Tag="TKRA|0|16|16|0x00000030"/>
+                <ComboBoxItem Content="Treasure Chest – Moon Pearl"  Tag="TKRA|0|16|16|0x00000016"/>
+                <ComboBoxItem Content="Floor Key"                    Tag="KEY0|0|16|16|0x00000000"/>
+                <ComboBoxItem Content="Floor Big Key"                Tag="KEY0|0|16|16|0x00000001"/>
+                <ComboBoxItem Content="Force Gem (1)"                Tag="RUPY|0|16|16|0x00000001"/>
+            </ComboBox>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Add" Style="{StaticResource AccentButton}"
+                    Click="Add_Click" Width="80" Margin="0,0,8,0"/>
+            <Button Content="Cancel" Style="{StaticResource ToolButton}"
+                    IsCancel="True" Width="80"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

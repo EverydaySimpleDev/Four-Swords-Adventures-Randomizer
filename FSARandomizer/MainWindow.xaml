@@ -1,0 +1,1240 @@
+﻿<Window x:Class="FSARandomizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FSARandomizer.ViewModels"
+        xmlns:conv="clr-namespace:FSARandomizer.Converters"
+        xmlns:models="clr-namespace:FSARandomizer.Models"
+        Title="FSA Randomizer"
+        Width="1300"
+        Height="820"
+        MinWidth="900"
+        MinHeight="600"
+        Background="{StaticResource BgDark}">
+
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:InverseBoolToVisibilityConverter x:Key="InvBoolToVis"/>
+        <conv:DirtyToBrushConverter x:Key="DirtyBrush"/>
+        <conv:ChangedToForegroundConverter x:Key="ChangedFg"/>
+        <conv:ByteToHexConverter x:Key="HexConv"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVis"/>
+        <conv:InverseNullToVisibilityConverter x:Key="InvNullToVis"/>
+
+        <!-- Dark-themed tooltip that matches the app style -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background"
+                    Value="#2A2A3A"/>
+            <Setter Property="Foreground"
+                    Value="#E0E0F0"/>
+            <Setter Property="BorderBrush"
+                    Value="#5050A0"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="Padding"
+                    Value="8,5"/>
+            <Setter Property="FontSize"
+                    Value="12"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+
+        <!-- ═══ Toolbar ═══════════════════════════════════════════════════════ -->
+        <ToolBarTray DockPanel.Dock="Top"
+                     Background="{StaticResource BgMid}"
+                     IsLocked="True">
+            <ToolBar Background="{StaticResource BgMid}"
+                     BorderThickness="0">
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding OpenFolderCommand}"
+                        ToolTip="Open a Boss/ folder (.arc files) or an extracted levels folder">
+                    📂  Open Folder
+                </Button>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding OpenIsoCommand}"
+                        ToolTip="Open a GameCube disc image (.iso/.gcm) and load levels directly from it">
+                    💿  Open ISO
+                </Button>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding ExportIsoCommand}"
+                        ToolTip="Export all levels as a new patched disc image (requires ISO was opened with Open ISO)">
+                    💾  Export ISO
+                </Button>
+                <Separator/>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding SaveAllCommand}"
+                        ToolTip="Save all modified actor files to disk">
+                    💾  Save Changes
+                </Button>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding RepackAllCommand}"
+                        ToolTip="Re-pack modified levels back into their .arc files (only available when opened from .arc)">
+                    📦  Repack .arc
+                </Button>
+                <Separator/>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding ExportCsvCommand}"
+                        ToolTip="Export item location list to CSV">
+                    ↑ Export CSV
+                </Button>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding ImportCsvCommand}"
+                        ToolTip="Import item assignments from CSV">
+                    ↓ Import CSV
+                </Button>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding ExportJsonCommand}"
+                        ToolTip="Export item locations to JSON">
+                    ↑ Export JSON
+                </Button>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding ImportJsonCommand}"
+                        ToolTip="Import item assignments from JSON">
+                    ↓ Import JSON
+                </Button>
+                <Separator/>
+                <Button Style="{StaticResource ToolButton}"
+                        Command="{Binding ExportSpoilerCommand}"
+                        ToolTip="Export spoiler log to JSON">
+                    📄  Spoiler Log
+                </Button>
+            </ToolBar>
+        </ToolBarTray>
+
+        <!-- ═══ Status bar ════════════════════════════════════════════════════ -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusText}"
+                           Foreground="{StaticResource TextMuted}"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- ═══ Main content: tabs ════════════════════════════════════════════ -->
+        <TabControl Margin="0">
+
+            <!-- ─── Tab 1: Level Browser ─────────────────────────────────── -->
+            <TabItem Header="Level Browser">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="240"
+                                          MinWidth="180"/>
+                        <ColumnDefinition Width="4"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Level tree -->
+                    <DockPanel Grid.Column="0"
+                               Background="{StaticResource BgMid}">
+                        <TextBlock DockPanel.Dock="Top"
+                                   Text="LEVELS"
+                                   Foreground="{StaticResource Accent}"
+                                   FontWeight="SemiBold"
+                                   Margin="8,8,8,4"
+                                   FontSize="11"/>
+                        <TreeView ItemsSource="{Binding Levels}"
+                                  SelectedItemChanged="LevelTree_SelectedItemChanged"
+                                  Background="{StaticResource BgMid}"
+                                  BorderThickness="0">
+                            <TreeView.ItemTemplate>
+                                <HierarchicalDataTemplate DataType="{x:Type vm:LevelViewModel}"
+                                                          ItemsSource="{Binding Rooms}">
+                                    <!-- Level node -->
+                                    <StackPanel Orientation="Horizontal"
+                                                Background="{Binding IsDirty, Converter={StaticResource DirtyBrush}}">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   Margin="2,1"
+                                                   FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding TotalItemChecks, StringFormat=' [{0} checks]'}"
+                                                   Foreground="{StaticResource TextMuted}"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <!-- Room child template -->
+                                    <HierarchicalDataTemplate.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:RoomViewModel}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Foreground="{StaticResource TextMuted}"
+                                                           Margin="2,1"/>
+                                                <TextBlock Text="{Binding ItemCheckCount, StringFormat=' ·{0}'}"
+                                                           Foreground="{StaticResource AccentYellow}"
+                                                           FontSize="11"
+                                                           VerticalAlignment="Center"
+                                                           Visibility="{Binding ItemCheckCount, Converter={StaticResource NullToVis}}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </HierarchicalDataTemplate.ItemTemplate>
+                                </HierarchicalDataTemplate>
+                            </TreeView.ItemTemplate>
+                        </TreeView>
+                    </DockPanel>
+
+                    <GridSplitter Grid.Column="1"
+                                  Width="4"
+                                  HorizontalAlignment="Stretch"
+                                  Background="{StaticResource Border}"/>
+
+                    <!-- Actor editor area -->
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="4"/>
+                            <RowDefinition Height="200"
+                                           MinHeight="80"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Room header + save button -->
+                        <DockPanel Grid.Row="0"
+                                   Margin="8,6,8,4"
+                                   Visibility="{Binding SelectedRoom, Converter={StaticResource NullToVis}}">
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource ToolButton}"
+                                    Click="SaveRoom_Click"
+                                    ToolTip="Save this room's actors to disk">
+                                💾 Save Room
+                            </Button>
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource ToolButton}"
+                                    Click="AddActor_Click"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Add a new actor to this room">
+                                ＋ Add Actor
+                            </Button>
+                            <TextBlock VerticalAlignment="Center">
+                                <Run Foreground="{StaticResource Accent}"
+                                     FontWeight="SemiBold"
+                                     Text="{Binding SelectedLevel.Name, FallbackValue='', Mode=OneWay}"/>
+                                <Run Text=" › "/>
+                                <Run Text="{Binding SelectedRoom.DisplayName, FallbackValue='', Mode=OneWay}"/>
+                                <Run Foreground="{StaticResource TextMuted}"
+                                     Text="{Binding SelectedRoom.Actors.Count, StringFormat='  ({0} actors)', FallbackValue='', Mode=OneWay}"/>
+                            </TextBlock>
+                        </DockPanel>
+
+                        <!-- Actor DataGrid -->
+                        <DataGrid Grid.Row="1"
+                                  x:Name="ActorGrid"
+                                  ItemsSource="{Binding SelectedRoom.Actors}"
+                                  Visibility="{Binding SelectedRoom, Converter={StaticResource NullToVis}}"
+                                  SelectionChanged="ActorGrid_SelectionChanged"
+                                  Margin="8,0,8,0"
+                                  CanUserDeleteRows="False"
+                                  IsReadOnly="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="#"
+                                                    Binding="{Binding Index}"
+                                                    Width="35"
+                                                    IsReadOnly="True"/>
+                                <DataGridTextColumn Header="ID"
+                                                    Binding="{Binding Id}"
+                                                    Width="55"/>
+                                <DataGridTextColumn Header="Type"
+                                                    Binding="{Binding TypeName}"
+                                                    Width="130"
+                                                    IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground"
+                                                    Value="{StaticResource Accent}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="L"
+                                                    Binding="{Binding Layer}"
+                                                    Width="35"/>
+                                <DataGridTextColumn Header="X"
+                                                    Binding="{Binding X}"
+                                                    Width="40"/>
+                                <DataGridTextColumn Header="Y"
+                                                    Binding="{Binding Y}"
+                                                    Width="40"/>
+                                <DataGridTextColumn Header="V1"
+                                                    Binding="{Binding V1, Converter={StaticResource HexConv}}"
+                                                    Width="50"/>
+                                <DataGridTextColumn Header="V2"
+                                                    Binding="{Binding V2, Converter={StaticResource HexConv}}"
+                                                    Width="50"/>
+                                <DataGridTextColumn Header="V3"
+                                                    Binding="{Binding V3, Converter={StaticResource HexConv}}"
+                                                    Width="50"/>
+                                <DataGridTextColumn Header="V4"
+                                                    Binding="{Binding V4, Converter={StaticResource HexConv}}"
+                                                    Width="50"/>
+                                <DataGridTextColumn Header="Description"
+                                                    Binding="{Binding ItemDescription}"
+                                                    Width="*"
+                                                    IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground"
+                                                    Value="{StaticResource AccentGreen}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Background"
+                                            Value="{StaticResource BgMid}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Category}"
+                                                     Value="Item">
+                                            <Setter Property="Background"
+                                                    Value="#14A6E3A1"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                        </DataGrid>
+
+                        <GridSplitter Grid.Row="2"
+                                      Height="4"
+                                      HorizontalAlignment="Stretch"
+                                      Background="{StaticResource Border}"/>
+
+                        <!-- Quick item editor for selected actor -->
+                        <Border Grid.Row="3"
+                                Background="{StaticResource BgMid}"
+                                x:Name="ActorDetailBorder"
+                                Margin="8,0,8,8"
+                                CornerRadius="4"
+                                BorderBrush="{StaticResource Border}"
+                                BorderThickness="1"
+                                Padding="12,8"
+                                Visibility="Collapsed">
+                            <Grid x:Name="ActorDetailPanel">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="4"
+                                           Text="Selected Actor"
+                                           Foreground="{StaticResource Accent}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,8"/>
+
+                                <Label Grid.Row="1"
+                                       Grid.Column="0"
+                                       Content="Actor ID:"
+                                       Margin="0,0,8,4"/>
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="1"
+                                         Text="{Binding SelectedActor.Id,
+                                                RelativeSource={RelativeSource AncestorType=Window},
+                                                UpdateSourceTrigger=PropertyChanged}"
+                                         Width="60"
+                                         HorizontalAlignment="Left"/>
+
+                                <Label Grid.Row="1"
+                                       Grid.Column="2"
+                                       Content="Description:"
+                                       Margin="12,0,8,4"/>
+                                <TextBlock Grid.Row="1"
+                                           Grid.Column="3"
+                                           Text="{Binding SelectedActor.ItemDescription,
+                                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                                           Foreground="{StaticResource AccentGreen}"
+                                           VerticalAlignment="Center"/>
+
+                                <Label Grid.Row="2"
+                                       Grid.Column="0"
+                                       Content="Chest Item (V4):"
+                                       Margin="0,4,8,0"/>
+                                <ComboBox Grid.Row="2"
+                                          Grid.Column="1"
+                                          x:Name="ChestItemCombo"
+                                          Width="200"
+                                          HorizontalAlignment="Left"
+                                          Margin="0,4,0,0"
+                                          SelectionChanged="ChestItemCombo_SelectionChanged"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Empty state -->
+                        <TextBlock x:Name="EmptyStateLabel"
+                                   Grid.Row="1"
+                                   Grid.RowSpan="3"
+                                   Text="Select a room in the tree to view its actors."
+                                   Foreground="{StaticResource TextMuted}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Visibility="{Binding SelectedRoom, Converter={StaticResource InvNullToVis}}"/>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- ─── Tab 2: Item Locations ─────────────────────────────────── -->
+            <TabItem Header="Item Locations">
+                <DockPanel Margin="8">
+                    <!-- Filter bar -->
+                    <StackPanel DockPanel.Dock="Top"
+                                Orientation="Horizontal"
+                                Margin="0,0,0,8">
+                        <Label Content="Filter World:"
+                               VerticalAlignment="Center"/>
+                        <ComboBox x:Name="WorldFilterCombo"
+                                  Width="180"
+                                  SelectionChanged="WorldFilter_Changed"
+                                  Margin="4,0,12,0"/>
+                        <Label Content="Filter Type:"
+                               VerticalAlignment="Center"/>
+                        <ComboBox x:Name="TypeFilterCombo"
+                                  Width="140"
+                                  SelectionChanged="TypeFilter_Changed"
+                                  Margin="4,0,12,0"/>
+                        <Label Content="Search:"
+                               VerticalAlignment="Center"/>
+                        <TextBox x:Name="SearchBox"
+                                 Width="200"
+                                 TextChanged="SearchBox_TextChanged"
+                                 Margin="4,0"/>
+                        <TextBlock x:Name="FilterCountLabel"
+                                   VerticalAlignment="Center"
+                                   Margin="12,0,0,0"
+                                   Foreground="{StaticResource TextMuted}"/>
+                    </StackPanel>
+
+                    <DataGrid x:Name="ItemLocGrid"
+                              ItemsSource="{Binding ItemLocations}"
+                              IsReadOnly="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="●"
+                                                Binding="{Binding ChangedMarker}"
+                                                Width="25"
+                                                IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground"
+                                                Value="{StaticResource AccentGreen}"/>
+                                        <Setter Property="FontSize"
+                                                Value="8"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="World"
+                                                Binding="{Binding WorldName}"
+                                                Width="160"
+                                                IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Section"
+                                                Binding="{Binding SectionLabel}"
+                                                Width="65"
+                                                IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground"
+                                                Value="{StaticResource AccentYellow}"/>
+                                        <Setter Property="FontWeight"
+                                                Value="SemiBold"/>
+                                        <Setter Property="HorizontalAlignment"
+                                                Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Level"
+                                                Binding="{Binding LevelName}"
+                                                Width="180"
+                                                IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Room"
+                                                Binding="{Binding RoomIndex}"
+                                                Width="50"
+                                                IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Pos"
+                                                Binding="{Binding Position}"
+                                                Width="80"
+                                                IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Type"
+                                                Binding="{Binding ActorTypeName}"
+                                                Width="120"
+                                                IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Orig. Item"
+                                                Binding="{Binding OriginalItemName}"
+                                                Width="160"
+                                                IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground"
+                                                Value="{StaticResource TextMuted}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTemplateColumn Header="New Item"
+                                                    Width="200">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding RandomizedItemName}"
+                                                   Foreground="{Binding IsChanged, Converter={StaticResource ChangedFg}}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding Source={x:Static models:GameData.ChestItems}}"
+                                                  DisplayMemberPath="Value"
+                                                  SelectedValuePath="Key"
+                                                  SelectedValue="{Binding RandomizedItemId, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="ID (hex)"
+                                                Binding="{Binding RandomizedItemHex}"
+                                                Width="75"
+                                                IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground"
+                                                Value="{StaticResource TextMuted}"/>
+                                        <Setter Property="FontFamily"
+                                                Value="Consolas"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background"
+                                        Value="{StaticResource BgMid}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsChanged}"
+                                                 Value="True">
+                                        <Setter Property="Background"
+                                                Value="#1489B4FA"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+
+            <!-- ─── Tab 3: Stage Order ───────────────────────────────────── -->
+            <TabItem Header="Stage Order">
+                <DockPanel Margin="8">
+
+                    <!-- Description + action buttons -->
+                    <Border DockPanel.Dock="Top"
+                            Background="{StaticResource BgMid}"
+                            BorderBrush="{StaticResource Border}"
+                            BorderThickness="1" CornerRadius="4"
+                            Padding="10,7" Margin="0,0,0,6">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource AccentButton}"
+                                        Command="{Binding StageOrderVm.ApplyCommand}"
+                                        Padding="10,4" Margin="0,0,6,0"
+                                        ToolTip="Store the current assignments into the active settings so they are used on the next Export to New ISO.">
+                                    ✔  Apply to Export
+                                </Button>
+                                <Button Style="{StaticResource ToolButton}"
+                                        Command="{Binding StageOrderVm.ResetCommand}"
+                                        Padding="10,4"
+                                        ToolTip="Reset every slot back to its original stage and clear the active placement override.">
+                                    ↺  Reset All
+                                </Button>
+                            </StackPanel>
+                            <TextBlock VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Foreground="{StaticResource TextMuted}" FontSize="11">
+                                Choose which stage's content appears in each slot.
+                                <Run Foreground="{StaticResource TextPrimary}">Left column</Run> = target slot (where it plays);
+                                <Run Foreground="{StaticResource TextPrimary}">dropdown</Run> = source stage whose content goes there.
+                                Click <Bold>Apply to Export</Bold> when done.
+                            </TextBlock>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- Pending-changes notice -->
+                    <Border DockPanel.Dock="Top"
+                            Background="#1A2800" BorderBrush="#5A7800"
+                            BorderThickness="1" CornerRadius="4"
+                            Padding="8,4" Margin="0,0,0,6"
+                            Visibility="{Binding StageOrderVm.HasUnappliedChanges,
+                                         Converter={StaticResource BoolToVis}}">
+                        <TextBlock Foreground="#AACC44" FontSize="11">
+                            ⚠  Unapplied changes — click <Bold>Apply to Export</Bold> to activate, or <Bold>Reset All</Bold> to discard.
+                        </TextBlock>
+                    </Border>
+
+                    <!-- Stage list grouped by world -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding StageOrderVm.WorldGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource BgMid}"
+                                            BorderBrush="{StaticResource Border}"
+                                            BorderThickness="1" CornerRadius="4"
+                                            Margin="0,0,0,6">
+                                        <StackPanel>
+                                            <!-- World header row -->
+                                            <Border Background="{StaticResource BgDark}"
+                                                    CornerRadius="4,4,0,0" Padding="10,5">
+                                                <TextBlock Text="{Binding WorldLabel}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource Accent}"/>
+                                            </Border>
+                                            <!-- Four stage rows -->
+                                            <ItemsControl ItemsSource="{Binding Stages}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="10,4,10,4">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="28"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="18"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <!-- Target slot label -->
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding TargetLabel}"
+                                                                       Foreground="{StaticResource TextPrimary}"
+                                                                       VerticalAlignment="Center"
+                                                                       FontFamily="Consolas,Courier New"
+                                                                       FontSize="11"/>
+                                                            <!-- Arrow -->
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="←"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{StaticResource TextMuted}"/>
+                                                            <!-- Source stage dropdown -->
+                                                            <ComboBox Grid.Column="2"
+                                                                      ItemsSource="{Binding AllOptions}"
+                                                                      SelectedItem="{Binding SelectedOption, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"
+                                                                      FontFamily="Consolas,Courier New"
+                                                                      FontSize="11"/>
+                                                            <!-- Changed marker -->
+                                                            <TextBlock Grid.Column="3"
+                                                                       Text="●"
+                                                                       Foreground="{StaticResource AccentGreen}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"
+                                                                       FontSize="9"
+                                                                       ToolTip="This slot differs from the original assignment"
+                                                                       Visibility="{Binding IsChanged,
+                                                                                    Converter={StaticResource BoolToVis}}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                </DockPanel>
+            </TabItem>
+
+            <!-- ─── Tab 4: Randomizer ─────────────────────────────────────── -->
+            <TabItem Header="Randomizer">
+                <Grid Margin="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="340"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: settings -->
+                    <DockPanel Grid.Column="0">
+
+                        <!-- Buttons always pinned to the bottom so they are never pushed off-screen -->
+                        <StackPanel DockPanel.Dock="Bottom">
+
+                            <!-- Warning banner: visible only when an AP/JSON placement map is loaded -->
+                            <Border Background="#3A2800"
+                                    BorderBrush="#B87800"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="10,7"
+                                    Margin="0,6,0,2"
+                                    Visibility="{Binding RandomizerVm.HasImportedPlacements,
+                                                 Converter={StaticResource BoolToVis}}">
+                                <TextBlock TextWrapping="Wrap"
+                                           Foreground="#FFD966"
+                                           FontSize="11">
+                                    <Bold>Explicit stage placements active.</Bold>
+                                    <LineBreak/>
+                                    Skip <Bold>Randomize!</Bold> — stage order is already set (via JSON import or the Stage Order tab).
+                                    Go straight to <Bold>Export to New ISO…</Bold> to apply them.
+                                    Clicking Randomize will discard these placements.
+                                </TextBlock>
+                            </Border>
+
+                            <Button Style="{StaticResource AccentButton}"
+                                    Command="{Binding RandomizerVm.RandomizeCommand}"
+                                    Content="🎲  Randomize!"
+                                    FontSize="15"
+                                    Padding="16,8"
+                                    Margin="0,8,0,2"/>
+                            <CheckBox Content="Randomize seed each time"
+                                      IsChecked="{Binding RandomizerVm.AutoRandomizeSeed}"
+                                      Margin="4,0,0,6"
+                                      FontSize="11"
+                                      ToolTip="When checked, a new random seed is generated automatically each time you click Randomize. Uncheck to reuse the current seed value."/>
+
+                            <Button Style="{StaticResource ToolButton}"
+                                    Command="{Binding ExportNewIsoCommand}"
+                                    Content="📀  Export to New ISO…"
+                                    Padding="12,6"
+                                    Margin="0,4,0,2"
+                                    ToolTip="Choose a folder and export a new randomized ISO (the source file is never changed)"/>
+
+                            <Button Style="{StaticResource ToolButton}"
+                                    Command="{Binding ReexportIsoCommand}"
+                                    Content="🔄  Re-export (overwrite last)"
+                                    Padding="12,6"
+                                    Margin="0,0,0,4"
+                                    ToolTip="Overwrite the previously exported ISO without choosing a folder again — useful for quickly iterating on seeds"/>
+                        </StackPanel>
+
+                        <!-- Scrollable settings + status + warnings -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock Text="RANDOMIZER SETTINGS"
+                                           Foreground="{StaticResource Accent}"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,12"/>
+
+                                <!-- Seed -->
+                                <GroupBox Header="Seed">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBox Text="{Binding RandomizerVm.Seed, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="120"/>
+                                        <Button Style="{StaticResource ToolButton}"
+                                                Command="{Binding RandomizerVm.NewSeedCommand}"
+                                                Margin="8,0,0,0"
+                                                Content="🎲 Random"/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Game Logic -->
+                                <GroupBox Header="Game Logic">
+                                    <StackPanel>
+                                        <CheckBox Content="Ensure Beatable (Game Logic)"
+                                                  IsChecked="{Binding RandomizerVm.EnsureBeatable}"
+                                                  ToolTip="Best-effort safeguard against unbeatable seeds. Enforces three constraints: (1) chest keys shuffle within their own level only, (2) floor keys and boss-door big keys are never moved from their original level, (3) Moon Pearls shuffle within their own level only — the official guide confirms Moon Pearl is required to open Dark World portals in W4, W5, W6, and W8, so a misplaced Moon Pearl can lock you out entirely. Off by default."/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Level Order -->
+                                <GroupBox Header="Level Order">
+                                    <StackPanel>
+                                        <CheckBox Content="Shuffle World Order"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleLevelOrder}"
+                                                  ToolTip="Randomizes which world you play in each world slot. All four stages of a world move together as a group, so you always get a coherent world experience — just in a different order. Mutually exclusive with Shuffle Stage Order. Off by default."/>
+                                        <CheckBox Content="Shuffle Stage Order"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleStageOrder}"
+                                                  ToolTip="Randomizes all 32 individual stages independently. Any stage can end up in any slot, mixing stages freely across worlds. Mutually exclusive with Shuffle World Order. Off by default."/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Keys group -->
+                                <GroupBox Header="Keys">
+                                    <StackPanel>
+                                        <CheckBox Content="Shuffle Keys (Keysanity)"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleKeys}"
+                                                  ToolTip="Shuffles both small keys and big keys into the item pool"/>
+                                        <CheckBox Content="  ↳ Small Keys stay in own level"
+                                                  IsChecked="{Binding RandomizerVm.KeysInOwnLevel}"
+                                                  Margin="12,0,0,0"
+                                                  ToolTip="Small keys only shuffle among key chest slots within the same dungeon"/>
+                                        <CheckBox Content="  ↳ Big Keys stay in own level"
+                                                  IsChecked="{Binding RandomizerVm.BigKeysInOwnLevel}"
+                                                  Margin="12,0,0,0"
+                                                  ToolTip="Big keys only shuffle among key chest slots within the same dungeon"/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Items group -->
+                                <GroupBox Header="Include in Pool">
+                                    <StackPanel>
+                                        <CheckBox Content="Shuffle Chest Items"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleChestItems}"
+                                                  ToolTip="Shuffle all chest item locations"/>
+                                        <CheckBox Content="Shuffle Floor Items (KEY0)"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleFloorKeyItems}"
+                                                  ToolTip="Shuffle floor pickup item locations"
+                                                  Margin="0,0,0,4"/>
+                                        <CheckBox Content="Moon Pearl"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleMoonPearl}"
+                                                  ToolTip="When unchecked, Moon Pearls stay at their original locations"/>
+                                        <CheckBox Content="  ↳ Moon Pearl stays in own level"
+                                                  IsChecked="{Binding RandomizerVm.MoonPearlInOwnLevel}"
+                                                  Margin="12,0,0,0"
+                                                  ToolTip="Moon Pearl only shuffles within chest slots in the same level it originally appears in"/>
+                                        <CheckBox Content="Heart Containers"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleHeartContainers}"
+                                                  ToolTip="When unchecked, Heart Containers stay at their original locations"/>
+                                        <CheckBox Content="  ↳ Heart Containers stay in own level"
+                                                  IsChecked="{Binding RandomizerVm.HeartContainerInOwnLevel}"
+                                                  Margin="12,0,0,0"
+                                                  ToolTip="Heart Containers only shuffle within chest slots in the same level"/>
+                                        <CheckBox Content="Big Bombs"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleBigBombs}"
+                                                  ToolTip="When unchecked, Big Bombs stay at their original locations"/>
+                                        <CheckBox Content="  ↳ Big Bombs stay in own level"
+                                                  IsChecked="{Binding RandomizerVm.BigBombInOwnLevel}"
+                                                  Margin="12,0,0,0"
+                                                  ToolTip="Big Bombs only shuffle within chest slots in the same level"/>
+                                        <CheckBox Content="Blue Bracelet"
+                                                  IsChecked="{Binding RandomizerVm.ShuffleBlueBracelet}"
+                                                  ToolTip="When unchecked, Blue Bracelets stay at their original locations"/>
+                                        <CheckBox Content="  ↳ Blue Bracelet stays in own level"
+                                                  IsChecked="{Binding RandomizerVm.BlueBraceletInOwnLevel}"
+                                                  Margin="12,0,0,0"
+                                                  ToolTip="Blue Bracelet only shuffles within chest slots in the same level"/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Status -->
+                                <TextBlock Text="{Binding RandomizerVm.StatusText}"
+                                           Foreground="{StaticResource AccentYellow}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,2"/>
+
+                                <!-- Key warnings -->
+                                <ScrollViewer MaxHeight="120"
+                                              VerticalScrollBarVisibility="Auto"
+                                              Margin="0,0,0,6"
+                                              Visibility="{Binding RandomizerVm.HasKeyWarnings,
+                                                                   Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding RandomizerVm.KeyWarningText}"
+                                               Foreground="#FF8C69"
+                                               TextWrapping="Wrap"
+                                               FontSize="11"/>
+                                </ScrollViewer>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+
+                    <!-- Right: spoiler log -->
+                    <DockPanel Grid.Column="2">
+                        <!-- Header row: label + toggle button -->
+                        <DockPanel DockPanel.Dock="Top"
+                                   Margin="0,0,0,8">
+                            <TextBlock Text="SPOILER LOG"
+                                       Foreground="{StaticResource Accent}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right"
+                                    HorizontalAlignment="Right"
+                                    Command="{Binding RandomizerVm.ToggleSpoilerCommand}"
+                                    Style="{StaticResource ToolButton}"
+                                    Padding="8,3">
+                                <Button.Content>
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text"
+                                                        Value="👁 Show Spoiler"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding RandomizerVm.IsSpoilerVisible}"
+                                                                 Value="True">
+                                                        <Setter Property="Text"
+                                                                Value="🙈 Hide Spoiler"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button.Content>
+                            </Button>
+                        </DockPanel>
+
+                        <!-- Hidden placeholder -->
+                        <TextBlock Text="Spoiler hidden — click 'Show Spoiler' to reveal"
+                                   Foreground="{StaticResource TextMuted}"
+                                   FontStyle="Italic"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Margin="0,40,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility"
+                                            Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RandomizerVm.IsSpoilerVisible}"
+                                                     Value="False">
+                                            <Setter Property="Visibility"
+                                                    Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <DataGrid ItemsSource="{Binding RandomizerVm.SpoilerEntries}"
+                                  IsReadOnly="True">
+                            <DataGrid.Style>
+                                <Style TargetType="DataGrid"
+                                       BasedOn="{StaticResource {x:Type DataGrid}}">
+                                    <Setter Property="Visibility"
+                                            Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RandomizerVm.IsSpoilerVisible}"
+                                                     Value="True">
+                                            <Setter Property="Visibility"
+                                                    Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.Style>
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Changed}"
+                                                     Value="False">
+                                            <Setter Property="Opacity"
+                                                    Value="0.45"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="World"
+                                                    Binding="{Binding World}"
+                                                    Width="160"/>
+                                <DataGridTextColumn Header="Level"
+                                                    Binding="{Binding Level}"
+                                                    Width="180"/>
+                                <DataGridTextColumn Header="Room"
+                                                    Binding="{Binding Room}"
+                                                    Width="50"/>
+                                <DataGridTextColumn Header="Position"
+                                                    Binding="{Binding Position}"
+                                                    Width="80"/>
+                                <DataGridTextColumn Header="Type"
+                                                    Binding="{Binding Type}"
+                                                    Width="120"/>
+                                <DataGridTextColumn Header="Original"
+                                                    Binding="{Binding OriginalItem}"
+                                                    Width="160">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground"
+                                                    Value="{StaticResource TextMuted}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="New Item"
+                                                    Binding="{Binding NewItem}"
+                                                    Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground"
+                                                    Value="{StaticResource AccentGreen}"/>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </DockPanel>
+                </Grid>
+            </TabItem>
+
+            <!-- ─── Tab 5: Log ────────────────────────────────────────────── -->
+            <TabItem Header="Log">
+                <DockPanel Margin="8">
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Load / operation log — check here if levels don't appear after opening a folder."
+                               Foreground="{StaticResource TextMuted}"
+                               Margin="0,0,0,6"/>
+                    <ListBox ItemsSource="{Binding LogLines}"
+                             Background="{StaticResource BgMid}"
+                             BorderBrush="{StaticResource Border}"
+                             FontFamily="Consolas, Courier New"
+                             FontSize="12">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Foreground"
+                                        Value="{StaticResource TextPrimary}"/>
+                                <Setter Property="Padding"
+                                        Value="4,2"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ─── Tab 6: Help ───────────────────────────────────────────── -->
+            <TabItem Header="❓ Help">
+                <TabItem.Resources>
+                    <Style x:Key="HH1"
+                           TargetType="TextBlock">
+                        <Setter Property="FontSize"
+                                Value="15"/>
+                        <Setter Property="FontWeight"
+                                Value="SemiBold"/>
+                        <Setter Property="Foreground"
+                                Value="{StaticResource Accent}"/>
+                        <Setter Property="Margin"
+                                Value="0,18,0,6"/>
+                    </Style>
+                    <Style x:Key="HH2"
+                           TargetType="TextBlock">
+                        <Setter Property="FontSize"
+                                Value="12"/>
+                        <Setter Property="FontWeight"
+                                Value="SemiBold"/>
+                        <Setter Property="Foreground"
+                                Value="{StaticResource AccentGreen}"/>
+                        <Setter Property="Margin"
+                                Value="0,10,0,3"/>
+                    </Style>
+                    <Style x:Key="HBody"
+                           TargetType="TextBlock">
+                        <Setter Property="TextWrapping"
+                                Value="Wrap"/>
+                        <Setter Property="Foreground"
+                                Value="{StaticResource TextPrimary}"/>
+                        <Setter Property="Margin"
+                                Value="0,0,0,6"/>
+                    </Style>
+                    <Style x:Key="HSub"
+                           TargetType="TextBlock">
+                        <Setter Property="TextWrapping"
+                                Value="Wrap"/>
+                        <Setter Property="Foreground"
+                                Value="{StaticResource TextMuted}"/>
+                        <Setter Property="FontSize"
+                                Value="11"/>
+                        <Setter Property="Margin"
+                                Value="0,0,0,4"/>
+                    </Style>
+                    <Style x:Key="HCard"
+                           TargetType="Border">
+                        <Setter Property="Background"
+                                Value="{StaticResource BgMid}"/>
+                        <Setter Property="BorderBrush"
+                                Value="{StaticResource Border}"/>
+                        <Setter Property="BorderThickness"
+                                Value="1"/>
+                        <Setter Property="CornerRadius"
+                                Value="4"/>
+                        <Setter Property="Padding"
+                                Value="16,12"/>
+                        <Setter Property="Margin"
+                                Value="0,0,0,4"/>
+                    </Style>
+                </TabItem.Resources>
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="28,16,28,32"
+                                MaxWidth="820">
+
+                        <!-- Title -->
+                        <TextBlock Text="FSA Randomizer — User Guide"
+                                   FontSize="20"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource Accent}"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource HSub}"
+                                   Text="Hover over any button or checkbox for a quick tooltip. This guide covers the full workflow and every setting in detail."
+                                   Margin="0,0,0,0"/>
+
+                        <!-- ── Quick Start ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Quick Start"
+                                   Margin="0,12,0,6"/>
+                        <Border Style="{StaticResource HCard}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Step 1</Bold>  Click <Bold>💿 Open ISO</Bold> in the toolbar and select your Four Swords Adventures disc image (.iso or .gcm). The app extracts all level data to a temporary folder — your original file is not changed.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Step 2</Bold>  Switch to the <Bold>Randomizer</Bold> tab, choose your settings (or leave the defaults), enter a seed number or click <Bold>🎲 Random</Bold>, then click <Bold>🎲 Randomize!</Bold></TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Step 3</Bold>  Click <Bold>📀 Export to New ISO…</Bold> and choose a save location. A new randomized disc image is written to that path.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0"><Bold>Step 4</Bold>  Load the exported ISO in Dolphin Emulator or on real hardware. Done!</TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Toolbar ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Toolbar Buttons"/>
+                        <Border Style="{StaticResource HCard}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Opening Files"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>📂 Open Folder</Bold>  — Open a folder of extracted level directories (boss010/, boss011/, …) or a Boss/ folder with .arc archives. Use this if you've already extracted the game with another tool.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>💿 Open ISO</Bold>  — Open a GameCube disc image (.iso or .gcm) directly. This is the recommended method — the app handles extraction automatically.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Saving Files"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>💾 Export ISO</Bold>  — Export the current level data to a new disc image. Same as "Export to New ISO…" in the Randomizer tab.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>💾 Save Changes</Bold>  — Save manual actor edits (made in the Level Browser) back to disk. Not needed if you're only randomizing.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>📦 Repack .arc</Bold>  — Pack modified levels back into their .arc archive files. Only available when the game was opened from a folder of .arc files, not from an ISO.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Import / Export Data"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>↑ Export JSON / ↓ Import JSON</Bold>  — Save or load the full item assignment as a JSON file. This preserves all location data and is the best format for sharing or restoring a specific layout.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>↑ Export CSV / ↓ Import CSV</Bold>  — Save or load item assignments as a spreadsheet. Useful for viewing or editing in Excel.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0"><Bold>📄 Spoiler Log</Bold>  — Export the spoiler log (what item is where) to a JSON file. The game must have been randomized first.</TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Level Browser ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Tab: Level Browser"/>
+                        <Border Style="{StaticResource HCard}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HBody}">Browse the game's level and room structure. You don't need this tab to randomize — it's mainly for exploration or manual editing.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Left panel</Bold>  — All levels grouped by world. Click a level to load its rooms.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Middle panel</Bold>  — A grid showing the room layout for the selected level. Click a room cell to see its actors.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Right panel</Bold>  — The actor list for the selected room. Each row is one actor (chest, enemy, switch, item, etc.). Click an actor to see its type, position, and variable data. You can edit variable values directly.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0"><Bold>💾 Save Room</Bold>  — Writes your actor edits for the current room back to disk. Changes are not saved automatically.</TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Item Locations ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Tab: Item Locations"/>
+                        <Border Style="{StaticResource HCard}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HBody}">A flat list of every item-giving location found in the loaded game. Updates automatically after you click Randomize!</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Treasure Chest (TKRA)</Bold>  — A locked chest that gives an item when opened.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Floor Item (KEY0)</Bold>  — An item sitting on the floor (keys, Moon Pearls, Power Bracelets, etc.).</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Original Item</Bold>  — What was at this location in the unmodified game.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0"><Bold>New Item</Bold>  — What is at this location after randomizing. Shown in green when changed from the original.</TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Randomizer ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Tab: Randomizer"/>
+                        <Border Style="{StaticResource HCard}">
+                            <StackPanel>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Seed"/>
+                                <TextBlock Style="{StaticResource HBody}">A number that controls the randomization. The same seed with the same settings always produces the identical result — share it with others to compare runs or reproduce a layout. Click <Bold>🎲 Random</Bold> to generate a new random seed.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Game Logic Group"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Ensure Beatable (Game Logic)</Bold>  — Enables a full key-logic check on every randomized level. Enforces three placement constraints: (1) chest keys shuffle within their own level only; (2) floor keys and boss-door big keys are never moved from their original level — the 4-player boss doors require their big key on-site and would be permanently sealed if it moved; (3) Moon Pearls shuffle within their own level only — the official player's guide confirms Moon Pearl is required to open Dark World portals in Worlds 4, 5, 6, and 8. After randomizing, a room-graph reachability check runs on every level: it walks the map from the starting room, collects keys it finds, unlocks doors, and flags any rooms that are permanently cut off because the key needed to enter them is behind those same locked doors (a key cycle). If a cycle is found, an orange warning appears listing exactly which rooms are blocked and why. Off by default.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Level Order Group"/>
+                                <TextBlock Style="{StaticResource HBody}">Controls whether the order of the game's 32 playable stages is randomized when exporting to ISO. Only one mode can be active at a time — enabling one automatically disables the other.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle World Order</Bold>  — Shuffles all eight worlds as groups. All four stages belonging to a world always move together, so World 1's slot might contain World 5's stages (5-1, 5-2, 5-3, and 5-hub) as a complete set. The experience within each world remains coherent; only the order you encounter them changes.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle Stage Order</Bold>  — Shuffles all 32 individual stages independently. Each stage slot can receive any stage from any world, so World 1 could end up containing stages like 5-2, 8-1, and 4-3 from completely different worlds. This is the more chaotic option.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}">Both options work by physically rearranging the level archive files inside the exported ISO. The original disc image is never modified. The seed used for level order is the same seed shown above — changing the seed also changes the level order.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Keys Group"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle Keys (Keysanity)</Bold>  — Adds small keys and big keys to the item pool so they can appear anywhere. When unchecked, all keys stay at their original locations.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>↳ Small Keys stay in own level</Bold>  — Small keys only shuffle among key-chest slots within the same dungeon they originally belong to.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>↳ Big Keys stay in own level</Bold>  — Big keys only shuffle within their own dungeon.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Include in Pool Group"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle Chest Items</Bold>  — Master switch for all treasure chest shuffling. Uncheck to leave every chest at its original item.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle Floor Items (KEY0)</Bold>  — Master switch for floor item pickups.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}">The item checkboxes below (<Bold>Moon Pearl</Bold>, <Bold>Heart Containers</Bold>, <Bold>Big Bombs</Bold>, <Bold>Blue Bracelet</Bold>) control whether each type is included in the shuffle pool. Uncheck one to leave that item type at its original locations.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}">Each item type also has a <Bold>↳ stays in own level</Bold> sub-option. When checked, that item type only shuffles within chest slots in the same dungeon — it won't travel to other levels.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Action Buttons"/>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>🎲 Randomize!</Bold>  — Applies all settings and shuffles items in memory. Nothing is written to disk yet — you can re-randomize or tweak settings as many times as you like without exporting.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>📀 Export to New ISO…</Bold>  — Choose a file path and write the randomized game to a new disc image. The source ISO you opened is never overwritten.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>🔄 Re-export (overwrite last)</Bold>  — Write to the same path as the last export without a file dialog. Handy when quickly testing different seeds back to back.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="⚠ Importing a JSON file"/>
+                                <TextBlock Style="{StaticResource HBody}">When you import a JSON, the item locations <Bold>and</Bold> stage placements are already fully specified inside the file — there is nothing left to randomize. The workflow is different from a normal seed run:</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>1.</Bold>  Open your source ISO (<Bold>💿 Open ISO</Bold>).</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>2.</Bold>  Import the JSON (<Bold>↓ Import JSON</Bold> in the toolbar).</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>3.</Bold>  Go straight to <Bold>📀 Export to New ISO…</Bold> — <Bold>do not click 🎲 Randomize!</Bold> Clicking Randomize will generate a new seed-based shuffle and overwrite the item locations and stage placements that the server sent you.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0">A yellow warning banner appears near the Randomize button whenever an Json placement map is active, reminding you to skip that step.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="JSON File Format"/>
+                                <TextBlock Style="{StaticResource HBody}">You can write a JSON file by hand and import it directly. Only the fields you include are applied.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Minimal format</Bold> — a flat array is enough for item-only imports:</TextBlock>
+                                <Border Background="#1A1A1A" CornerRadius="3" Padding="8,6" Margin="0,0,0,6">
+                                    <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#B0C4DE" TextWrapping="Wrap">
+                                        [<LineBreak/>
+                                        &#160;&#160;{ "Key": "010_00_001", "NewItemId": 17 },<LineBreak/>
+                                        &#160;&#160;{ "Key": "011_02_004", "NewItemId": 16 }<LineBreak/>
+                                        ]
+                                    </TextBlock>
+                                </Border>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Full wrapped format</Bold> — include a Settings block to also restore all randomizer options and stage placements:</TextBlock>
+                                <Border Background="#1A1A1A" CornerRadius="3" Padding="8,6" Margin="0,0,0,6">
+                                    <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#B0C4DE" TextWrapping="Wrap">
+                                        {<LineBreak/>
+                                        &#160;&#160;"Settings": {<LineBreak/>
+                                        &#160;&#160;&#160;&#160;"Seed": 12345,<LineBreak/>
+                                        &#160;&#160;&#160;&#160;"ShuffleChestItems": true,<LineBreak/>
+                                        &#160;&#160;&#160;&#160;"StagePlacements": {<LineBreak/>
+                                        &#160;&#160;&#160;&#160;&#160;&#160;"boss010": "boss050",<LineBreak/>
+                                        &#160;&#160;&#160;&#160;&#160;&#160;"boss011": "boss020"<LineBreak/>
+                                        &#160;&#160;&#160;&#160;}<LineBreak/>
+                                        &#160;&#160;},<LineBreak/>
+                                        &#160;&#160;"Locations": [<LineBreak/>
+                                        &#160;&#160;&#160;&#160;{ "Key": "010_00_001", "NewItemId": 17 }<LineBreak/>
+                                        &#160;&#160;]<LineBreak/>
+                                        }
+                                    </TextBlock>
+                                </Border>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Key</Bold> format: <Bold>{LevelId}_{RoomIndex:D2}_{ActorIndex:D3}</Bold>  e.g. "010_00_001" = level 010, room 0, actor 1. Must match exactly — unmatched keys are silently skipped.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>NewItemId</Bold> is the only required field per location entry (a decimal byte). All other fields (LevelName, Room, Position, etc.) are informational and ignored on import.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>StagePlacements</Bold> keys and values are both "boss{stem}". The key is the target slot; the value is which stage's content goes there. Valid stems:</TextBlock>
+                                <Border Background="#1A1A1A" CornerRadius="3" Padding="8,6" Margin="0,0,0,6">
+                                    <TextBlock FontFamily="Consolas" FontSize="11" Foreground="#B0C4DE" TextWrapping="Wrap">010 011 200 013  020 021 201 023  030 031 202 033  040 041 203 043&#10;050 051 204 053  060 061 205 063  070 071 206 073  080 207 081 083</TextBlock>
+                                </Border>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Spoiler Log"/>
+                                <TextBlock Style="{StaticResource HBody}">After randomizing, click <Bold>👁 Show Spoiler</Bold> to see the full item layout — every location, what was there originally, and what's there now. Dimmed rows are locations where the item didn't change. Click <Bold>🙈 Hide Spoiler</Bold> to hide it. Use the toolbar <Bold>📄 Spoiler Log</Bold> button to save the log to a JSON file.</TextBlock>
+
+                                <TextBlock Style="{StaticResource HH2}"
+                                           Text="Warnings After Randomizing"/>
+                                <TextBlock Style="{StaticResource HBody}">After every randomize an orange warning may appear below the status line. What it reports depends on the <Bold>Ensure Beatable</Bold> setting:</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Ensure Beatable OFF</Bold> — A simple key-count check runs. If any level ends up with fewer keys than it originally had (because they were shuffled into other levels), a warning lists each affected level and its key count, e.g. <Bold>Eastern Temple: 1/3 small keys</Bold>. To prevent this, enable <Bold>Ensure Beatable</Bold> or turn on the <Bold>Small Keys stay in own level</Bold> / <Bold>Big Keys stay in own level</Bold> constraints.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0"><Bold>Ensure Beatable ON</Bold> — A full room-graph reachability check runs instead. It simulates walking each level from its entrance, picking up keys and opening locked doors. If the player would ever be stuck — every remaining locked door leads into a room whose key is behind that same door (a key cycle) — the warning names the blocked room and the door type causing the deadlock. The warning does not prevent export; use it to decide whether to re-seed.</TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ── Log ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Tab: Log"/>
+                        <Border Style="{StaticResource HCard}">
+                            <TextBlock Style="{StaticResource HBody}"
+                                       Margin="0">Shows a running log of everything the app has done — file loading, extraction progress, warnings, and errors. If levels aren't appearing after opening a folder or ISO, check here for clues about what went wrong.</TextBlock>
+                        </Border>
+
+                        <!-- ── Tips ── -->
+                        <TextBlock Style="{StaticResource HH1}"
+                                   Text="Tips"/>
+                        <Border Style="{StaticResource HCard}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource HBody}">•  <Bold>Your source ISO is always safe.</Bold>  The app enforces this — it will refuse to export over the file you originally opened.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}">•  You can click <Bold>🎲 Randomize!</Bold> as many times as you like without reopening the file. Just change the seed and go.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}">•  <Bold>Export JSON</Bold> after finding a seed you like — you can re-import it at any time to restore that exact layout without needing to remember the seed and settings.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}">•  When <Bold>Shuffle World Order</Bold> or <Bold>Shuffle Stage Order</Bold> is active, the Log tab shows which stage ended up in each slot after export (e.g. <Bold>boss010 &lt;- boss050</Bold>). Use this to verify the shuffle applied and to check against the spoiler log.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"
+                                           Margin="0">•  Hover over any checkbox or button for a tooltip with a quick explanation of what it does.</TextBlock>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+        </TabControl>
+    </DockPanel>
+</Window>

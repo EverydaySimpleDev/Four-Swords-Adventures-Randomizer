@@ -1,0 +1,51 @@
+{
+  "name": "Trapdoor Floor",
+  "description": "A floor that can open like a trapdoor when activated.",
+  "InternalName": "仕掛け床",
+  "category": "TileObject",
+  "fields": [
+    {
+      "name": "Activation Variable",
+      "description": "The local variable number that triggers or activates this trapdoor floor.",
+      "bitOffset": 27,
+      "bitSize": 5,
+      "valueType": "Integer"
+    },
+    {
+      "name": "Options",
+      "description": "",
+      "bitOffset": 24,
+      "bitSize": 3,
+      "valueType": "Flags",
+      "enumValues": {
+        "1": {
+          "name": "Use variable",
+          "description": "Activated by variable."
+        }
+      }
+    },
+    {
+      "name": "Unknown Variable 3",
+      "description": "Unknown purpose.",
+      "bitOffset": 8,
+      "bitSize": 8,
+      "valueType": "Integer"
+    },
+    {
+      "name": "Trapdoor Type",
+      "description": "Defines a specific trapdoor behavior.",
+      "bitOffset": 0,
+      "bitSize": 8,
+      "valueType": "Enum",
+      "enumValues": {
+        "0": { "name": "Cave floor", "description": "" },
+        "1": { "name": "Grass Broken?", "description": "" },
+        "2": { "name": "House", "description": "" },
+        "3": { "name": "Tree", "description": "" },
+        "4": { "name": "House Broken?", "description": "" },
+        "5": { "name": "House Broken?", "description": "" },
+        "6": { "name": "Grass", "description": "" }
+      }
+    }
+  ]
+}
