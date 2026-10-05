@@ -12,18 +12,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FSALib\FSALib.csproj" />
+    <PackageReference Include="FSALib" Version="1.3.0" GeneratePathProperty="true" />
   </ItemGroup>
 
-  <!-- Copy FSALib actor schema JSON files so Assets.Actors is populated at runtime -->
+  <!-- FSALib packs its asset JSON (actors, stages, worlds, ...) as contentFiles without
+       copyToOutput, so copy them explicitly so Assets.* is populated at runtime.
+       tileproperties.json is left out: FSALib 1.3.0 (net8.0) cannot parse its enum strings,
+       which makes Assets.Reload() throw, and the randomizer does not use tile properties. -->
   <ItemGroup>
-    <Content Include="..\FSALib\assets\**"
-             CopyToOutputDirectory="Always"
+    <Content Include="$(PkgFSALib)\contentFiles\any\any\assets\**"
+             Exclude="$(PkgFSALib)\contentFiles\any\any\assets\tileproperties.json"
+             CopyToOutputDirectory="PreserveNewest"
              Link="assets\%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="AuroraLib.Compression" Version="1.5.3" />
   </ItemGroup>
 
 </Project>

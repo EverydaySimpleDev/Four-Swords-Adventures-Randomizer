@@ -1,3 +1,4 @@
+using FSARandomizer.Archive;
 using FSARandomizer.Models;
 using FSARandomizer.Services;
 using System;
@@ -12,6 +13,7 @@ namespace FSARandomizer.ViewModels
     {
         private readonly RandomizerService   _service;
         private readonly LevelGraphService   _graphService = new LevelGraphService();
+        private readonly EnemyRandomizerService _enemyService = new EnemyRandomizerService();
         private string _statusText = "Ready.";
         private int _seed;
 
@@ -100,6 +102,17 @@ namespace FSARandomizer.ViewModels
         public bool ShuffleHeartContainers { get; set; } = false;
         public bool ShuffleBigBombs { get; set; } = false;
         public bool ShuffleBlueBracelet { get; set; } = false;
+
+        // Enemies
+        public bool RandomizeEnemies { get; set; } = false;
+
+        // Quality of life
+        public bool SkipIntro { get; set; } = false;
+
+        /// <summary>Code patches to apply to main.dol on export, from the quality-of-life options.</summary>
+        public DolPatch[] BuildDolPatches() =>
+            new[] { (SkipIntro, DolPatcher.SkipIntro) }
+                .Where(p => p.Item1).Select(p => p.Item2).ToArray();
 
         // ── Commands ──────────────────────────────────────────────────────────
 
@@ -213,7 +226,15 @@ namespace FSARandomizer.ViewModels
                 SpoilerEntries.Add(entry);
             IsSpoilerVisible = false;
 
-            StatusText = $"Seed {Seed}: {log.Locations.Count} locations shuffled.";
+            // Enemies always start again from the originals, so re-rolling or turning the
+            // option off leaves no leftovers from the previous run.
+            string enemyText = "";
+            if (Game != null && RandomizeEnemies)
+                enemyText = $", {_enemyService.Randomize(Game, Seed)} enemies swapped";
+            else
+                _enemyService.Restore();
+
+            StatusText = $"Seed {Seed}: {log.Locations.Count} locations shuffled{enemyText}.";
             OnPropertyChanged(nameof(HasKeyWarnings));
         }
 
@@ -240,6 +261,8 @@ namespace FSARandomizer.ViewModels
             ShuffleHeartContainers   = s.ShuffleHeartContainers;
             ShuffleBigBombs          = s.ShuffleBigBombs;
             ShuffleBlueBracelet      = s.ShuffleBlueBracelet;
+            RandomizeEnemies         = s.RandomizeEnemies;
+            SkipIntro                = s.SkipIntro;
             ProgressiveSwords        = s.ProgressiveSwords;
             FormationsAsItems        = s.FormationsAsItems;
             RefreshAll();
@@ -267,6 +290,8 @@ namespace FSARandomizer.ViewModels
             ShuffleHeartContainers = ShuffleHeartContainers,
             ShuffleBigBombs = ShuffleBigBombs,
             ShuffleBlueBracelet = ShuffleBlueBracelet,
+            RandomizeEnemies = RandomizeEnemies,
+            SkipIntro = SkipIntro,
         };
     }
 

@@ -4,7 +4,7 @@ namespace FSARandomizer.Models
 {
     /// <summary>
     /// Central lookup tables for FSA game data: level names, item IDs, actor types.
-    /// All data sourced from "Hex & Dolphin Memory Notes.txt" and actor templates.
+    /// Data sourced from hex/Dolphin RAM analysis and actor templates.
     /// </summary>
     public static class GameData
     {
@@ -13,63 +13,60 @@ namespace FSARandomizer.Models
         public static readonly IReadOnlyDictionary<string, LevelInfo> Levels =
             new Dictionary<string, LevelInfo>
             {
+                // Each world has three playable stages: bossXX0, bossXX1 and bossXX3.
+                // bossXX2 is a cut development stage in every world, so it has no section label.
+                // Names cross-checked against EFSAdvent's FSALib/assets/stages.json.
                 // World 1 – Whereabouts of the Wind
-                // Section numbers confirmed by Hex & Dolphin Memory Notes:
-                // boss012 (River's Flow) is a cut level — skipped in progression bits
                 ["010"] = new("Lake Hylia",                    0, "Whereabouts of the Wind", "1-1"),
                 ["011"] = new("Cave of No Return",             0, "Whereabouts of the Wind", "1-2"),
-                ["012"] = new("The River's Flow (cut)",        0, "Whereabouts of the Wind", ""),
+                ["012"] = new("River Flow (cut)",              0, "Whereabouts of the Wind", ""),
                 ["013"] = new("Hyrule Castle",                 0, "Whereabouts of the Wind", "1-3"),
                 // World 2 – Eastern Hyrule
-                // boss022 (Swamp) is always-unlocked in progression bits — not a discrete stage
                 ["020"] = new("The Coast",                     1, "Eastern Hyrule",           "2-1"),
                 ["021"] = new("Village of the Blue Maiden",    1, "Eastern Hyrule",           "2-2"),
-                ["022"] = new("Swamp",                         1, "Eastern Hyrule",           ""),
+                ["022"] = new("Rainy Forest (cut)",            1, "Eastern Hyrule",           ""),
                 ["023"] = new("Eastern Temple",                1, "Eastern Hyrule",           "2-3"),
                 // World 3 – Death Mountain
-                // boss032 (Death Mountain) is always-unlocked in progression bits
                 ["030"] = new("Death Mountain Foothills",      2, "Death Mountain",           "3-1"),
                 ["031"] = new("The Mountain Path",             2, "Death Mountain",           "3-2"),
-                ["032"] = new("Death Mountain",                2, "Death Mountain",           ""),
+                ["032"] = new("Mountain Road (cut)",           2, "Death Mountain",           ""),
                 ["033"] = new("Tower of Flames",               2, "Death Mountain",           "3-3"),
-                // World 4 – Near the Fields (all 4 are discrete stages)
+                // World 4 – Near the Fields
                 ["040"] = new("The Field",                     3, "Near the Fields",          "4-1"),
                 ["041"] = new("The Swamp",                     3, "Near the Fields",          "4-2"),
-                ["042"] = new("Infiltration of Hyrule Castle", 3, "Near the Fields",          "4-3"),
-                ["043"] = new("Hyrule Castle Interior",        3, "Near the Fields",          "4-4"),
+                ["042"] = new("Graveyard (cut)",               3, "Near the Fields",          ""),
+                ["043"] = new("Infiltration of Hyrule Castle", 3, "Near the Fields",          "4-3"),
                 // World 5 – The Dark World
-                // boss052 (Dark World Path) is a connector — not a discrete progression stage
                 ["050"] = new("Lost Woods",                    4, "The Dark World",           "5-1"),
                 ["051"] = new("Kakariko Village",              4, "The Dark World",           "5-2"),
-                ["052"] = new("Dark World Path",               4, "The Dark World",           ""),
+                ["052"] = new("Four Descents into the Darkness (cut)", 4, "The Dark World",   ""),
                 ["053"] = new("Temple of Darkness",            4, "The Dark World",           "5-3"),
                 // World 6 – The Desert of Doubt
-                // boss062 (Desert) is a connector between Desert Temple and Pyramid
                 ["060"] = new("Desert of Doubt",               5, "The Desert of Doubt",     "6-1"),
                 ["061"] = new("Desert Temple",                 5, "The Desert of Doubt",     "6-2"),
-                ["062"] = new("Desert",                        5, "The Desert of Doubt",     ""),
+                ["062"] = new("Oasis (cut)",                   5, "The Desert of Doubt",     ""),
                 ["063"] = new("Pyramid",                       5, "The Desert of Doubt",     "6-3"),
-                // World 7 – Frozen Hyrule (all 4 are discrete stages per progression bits)
+                // World 7 – Frozen Hyrule
                 ["070"] = new("Frozen Hyrule",                 6, "Frozen Hyrule",           "7-1"),
-                ["071"] = new("The Ice Temple",                6, "Frozen Hyrule",           "7-2"),
-                ["072"] = new("Tower of Winds",                6, "Frozen Hyrule",           "7-3"),
-                ["073"] = new("Zelda",                         6, "Frozen Hyrule",           "7-4"),
+                ["071"] = new("Temple of Ice",                 6, "Frozen Hyrule",           "7-2"),
+                ["072"] = new("Through the Blizzard (cut)",    6, "Frozen Hyrule",           ""),
+                ["073"] = new("Tower of Winds",                6, "Frozen Hyrule",           "7-3"),
                 // World 8 – Realm of the Heavens
                 ["080"] = new("Realm of the Heavens",          7, "Realm of the Heavens",    "8-1"),
                 ["081"] = new("The Dark Cloud",                7, "Realm of the Heavens",    "8-2"),
-                ["082"] = new("The Heavens (connector)",       7, "Realm of the Heavens",    ""),
+                ["082"] = new("Fortress of Winds (cut)",       7, "Realm of the Heavens",    ""),
                 ["083"] = new("Palace of Winds",               7, "Realm of the Heavens",    "8-3"),
-                // Boss stages — boss000-009 are the end-of-world boss arenas (boss003 does not exist in the ISO)
-                // boss005 has ShowE3Banner=1 and only 7 rooms — cut/demo stage, not part of the final game
-                ["000"] = new("W1 Boss: Phantom Ganon",          -1, "Boss Stages", ""),
-                ["001"] = new("W2 Boss: Stone Arrghus",          -1, "Boss Stages", ""),
-                ["002"] = new("W3 Boss: Big Dodongo",            -1, "Boss Stages", ""),
-                ["004"] = new("W4 Boss: Phantom Ganon II",       -1, "Boss Stages", ""),
-                ["005"] = new("Boss Stage (Cut/Demo)",           -1, "Boss Stages", ""),
-                ["006"] = new("W5 Boss: Phantom Ganon III",      -1, "Boss Stages", ""),
-                ["007"] = new("W6 Boss: Big Moldorm",            -1, "Boss Stages", ""),
-                ["008"] = new("W7 Boss: Frostare",               -1, "Boss Stages", ""),
-                ["009"] = new("W8 Boss: Vaati & Ganon",          -1, "Boss Stages", ""),
+                // boss000–009 are development test / demo stages, not part of the final game
+                // (boss003 does not exist in the ISO). Boss fights live inside each world's stage 3.
+                ["000"] = new("Test-1",                          -1, "Test / Demo Stages", ""),
+                ["001"] = new("Test-2",                          -1, "Test / Demo Stages", ""),
+                ["002"] = new("Test-3",                          -1, "Test / Demo Stages", ""),
+                ["004"] = new("ETCS-1",                          -1, "Test / Demo Stages", ""),
+                ["005"] = new("ETCS-2",                          -1, "Test / Demo Stages", ""),
+                ["006"] = new("ETCS-3",                          -1, "Test / Demo Stages", ""),
+                ["007"] = new("E3-1",                            -1, "Test / Demo Stages", ""),
+                ["008"] = new("E3-2",                            -1, "Test / Demo Stages", ""),
+                ["009"] = new("Tingle's room / E3-3",            -1, "Test / Demo Stages", ""),
                 ["500"] = new("Shadow Battle", -1, "Shadow Battle", ""),
             };
 
@@ -77,7 +74,7 @@ namespace FSARandomizer.Models
             Levels.TryGetValue(id, out var info) ? info.Name : $"Level {id}";
 
         // ── Chest item IDs (TKRA VariableByte4) ──────────────────────────────
-        // Source: $802eb78c analysis in memory notes
+        // Source: analysis of the table at $802eb78c (Dolphin RAM)
 
         public static readonly IReadOnlyDictionary<byte, string> ChestItems =
             new Dictionary<byte, string>
@@ -188,7 +185,7 @@ namespace FSARandomizer.Models
                 [0x0A] = "Slingshot",
             };
 
-        // ── Formation item IDs (as per AP notes) ─────────────────────────────
+        // ── Formation item IDs ───────────────────────────────────────────────
 
         public static readonly IReadOnlyDictionary<byte, string> Formations =
             new Dictionary<byte, string>

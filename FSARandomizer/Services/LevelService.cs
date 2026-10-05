@@ -93,14 +93,14 @@ namespace FSARandomizer.Services
             if (!int.TryParse(id, out int mapIndex)) return null;
 
             // Try multiplayer map first, fall back to singleplayer
-            string mapFile = Map.GetFilePath(dir, mapIndex, singleplayer: false);
+            string mapFile = MapLayout.GetFilePath(dir, mapIndex, singleplayer: false);
             if (!File.Exists(mapFile))
-                mapFile = Map.GetFilePath(dir, mapIndex, singleplayer: true);
+                mapFile = MapLayout.GetFilePath(dir, mapIndex, singleplayer: true);
             if (!File.Exists(mapFile)) return null;
 
-            Map map;
+            var map = new MapLayout();
             using (var fs = File.OpenRead(mapFile))
-                map = new Map(fs);
+                map.ReadFromStream(fs);
 
             var info = GameData.Levels.TryGetValue(id, out var li) ? li
                        : new LevelInfo($"Level {id}", -1, "Unknown");
@@ -124,7 +124,7 @@ namespace FSARandomizer.Services
                 for (int x = 0; x < map.XDimension; x++)
                 {
                     int roomIdx = map[x, y];
-                    if (roomIdx == Map.EMPTY_ROOM_VALUE) continue;
+                    if (roomIdx == MapLayout.EMPTY_ROOM_VALUE) continue;
                     if (level.Rooms.Any(r => r.RoomIndex == roomIdx)) continue;
 
                     string binPath = ActorList.GetFilePath(dir, level.MapIndex, roomIdx);
@@ -132,7 +132,7 @@ namespace FSARandomizer.Services
 
                     var actors = new ActorList();
                     using (var fs = File.OpenRead(binPath))
-                        actors.BinaryDeserialize(fs);
+                        actors.ReadFromStream(fs);
 
                     level.Rooms.Add(new LoadedRoom
                     {
@@ -215,7 +215,7 @@ namespace FSARandomizer.Services
         {
             Directory.CreateDirectory(Path.GetDirectoryName(room.ActorFilePath)!);
             using var fs = File.Create(room.ActorFilePath);
-            room.Actors.BinarySerialize(fs);
+            room.Actors.WriteToStream(fs);
         }
 
         /// <summary>
@@ -249,6 +249,7 @@ namespace FSARandomizer.Services
         /// </param>
         public void ExportIso(LoadedGame game, string outputIsoPath,
                               int[]? stagePerm = null,
+                              IEnumerable<DolPatch>? dolPatches = null,
                               IProgress<string>? progress = null)
         {
             // Determine source ISO path
@@ -312,6 +313,15 @@ namespace FSARandomizer.Services
                 foreach (var kv in shuffled)
                     replacements[kv.Key] = kv.Value;
 
+                // Swap the world-map title banners so each slot shows the name of the stage now in it.
+                var mapEntry = reader.FindFile(MapArcPath);
+                if (mapEntry != null)
+                {
+                    replacements[MapArcPath] = ShuffleTitleBanners(reader.ReadFile(mapEntry), stagePerm);
+                    progress?.Report("Updated world map stage titles to match the new order.");
+                }
+                else progress?.Report($"  Warning: {MapArcPath} not found – stage titles left unchanged.");
+
                 // Log each changed slot
                 for (int i = 0; i < totalStages; i++)
                 {
@@ -322,6 +332,43 @@ namespace FSARandomizer.Services
 
             progress?.Report($"Injecting {replacements.Count} modified level(s) into new ISO…");
             GcmWriter.ReplaceFiles(sourcePath, outputIsoPath, replacements, progress);
+
+            // Code patches go straight into main.dol of the new image (it is copied verbatim above).
+            if (dolPatches != null)
+                foreach (var line in DolPatcher.Apply(outputIsoPath, dolPatches))
+                    progress?.Report(line);
+        }
+
+        // ── World map title banners ───────────────────────────────────────────
+
+        private const string MapArcPath = "GC4Sword_usa/map1.arc";
+
+        /// <summary>
+        /// The world map shows each stage's name as an image, timg/w{world}_{slot}.bti in map1.arc.
+        /// Its four slots per world (stage 1, stage 2, Tingle's Tower, stage 3) line up with
+        /// WorldStems, so banner i belongs to stage slot i.
+        /// </summary>
+        private static string TitleBannerName(int slot) => $"w{slot / StagesPerWorld + 1:00}_{slot % StagesPerWorld + 1:00}.bti";
+
+        private static byte[] ShuffleTitleBanners(byte[] mapArcBytes, int[] stagePerm)
+        {
+            var archive = RarcArchive.Load(new MemoryStream(mapArcBytes));
+            int total = ShuffleableWorlds * StagesPerWorld;
+            var banners = new RarcFile?[total];
+            for (int i = 0; i < total; i++)
+                banners[i] = archive.Root.FindFile(TitleBannerName(i));
+
+            var original = banners.Select(b => b?.Data).ToArray();
+            for (int i = 0; i < total; i++)
+            {
+                var src = original[stagePerm[i]];
+                if (banners[i] != null && src != null)
+                    banners[i]!.Data = src;
+            }
+
+            using var ms = new MemoryStream();
+            archive.Save(ms, compress: true);
+            return ms.ToArray();
         }
 
         // ── RARC rename helpers ───────────────────────────────────────────────
@@ -434,11 +481,12 @@ namespace FSARandomizer.Services
                 var room = level.Rooms.FirstOrDefault(r => r.RoomIndex == loc.RoomIndex);
                 if (room == null) continue;
 
-                if (loc.ActorIndex >= room.Actors.Count) continue;
+                int index = FindItemActor(room, loc);
+                if (index < 0) continue;
 
-                var actor = room.Actors[loc.ActorIndex];
+                var actor = room.Actors[index];
                 actor.VariableByte1 = loc.RandomizedItemId;
-                room.Actors[loc.ActorIndex] = actor;
+                room.Actors[index] = actor;
                 room.IsDirty = true;
             }
 
@@ -454,6 +502,26 @@ namespace FSARandomizer.Services
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Find the chest or floor item for <paramref name="loc"/> in its room. ActorList keeps
+        /// itself sorted, so other edits (an item write, an enemy swap) can shift indexes;
+        /// match on type, layer and position, and use the stored index only to pick between
+        /// several matches on the same tile.
+        /// </summary>
+        private static int FindItemActor(LoadedRoom room, ItemLocation loc)
+        {
+            int first = -1;
+            for (int i = 0; i < room.Actors.Count; i++)
+            {
+                var a = room.Actors[i];
+                if (a.Name.Trim() != loc.ActorType || a.Layer != loc.Layer
+                    || a.XCoord != loc.X || a.YCoord != loc.Y) continue;
+                if (i == loc.ActorIndex) return i;
+                if (first < 0) first = i;
+            }
+            return first;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -503,7 +571,7 @@ namespace FSARandomizer.Services
         public string SectionLabel { get; set; } = "";
         public string BaseDirectory { get; set; } = "";
         public string? SourceArcPath { get; set; }
-        public Map Map { get; set; } = new Map();
+        public MapLayout Map { get; set; } = new MapLayout();
         public List<LoadedRoom> Rooms { get; } = new();
         public bool IsModified => Rooms.Any(r => r.IsDirty);
     }

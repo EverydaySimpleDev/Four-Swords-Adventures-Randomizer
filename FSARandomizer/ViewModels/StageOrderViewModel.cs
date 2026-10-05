@@ -35,15 +35,18 @@ namespace FSARandomizer.ViewModels
         // Suppresses the "unapplied" flag during bulk load/reset operations.
         private bool _suppressPendingFlag;
 
-        // All 32 options shared across every slot dropdown — built once from WorldStems.
+        // The 24 story-stage options shared across every slot dropdown — built once from WorldStems.
+        // Tingle's Tower mini-game slots are not shuffled, so they get neither a slot nor an option.
         internal static readonly List<StageOption> AllOptions;
+        private static readonly Dictionary<int, StageOption> s_optionBySlot;
 
         static StageOrderViewModel()
         {
             var stems = DolPatcherService.WorldStems;
-            AllOptions = new List<StageOption>(stems.Length);
-            for (int i = 0; i < stems.Length; i++)
-                AllOptions.Add(new StageOption(i, stems[i], BuildStemLabel(stems[i], i)));
+            AllOptions = DolPatcherService.StorySlots
+                .Select(i => new StageOption(i, stems[i], BuildStemLabel(stems[i])))
+                .ToList();
+            s_optionBySlot = AllOptions.ToDictionary(o => o.SlotIndex);
         }
 
         public StageOrderViewModel(RandomizerViewModel randVm)
@@ -66,14 +69,13 @@ namespace FSARandomizer.ViewModels
                     ? info.WorldName : $"World {worldNum}";
                 var group = new WorldGroupViewModel($"World {worldNum} — {worldName}");
 
-                // Build the 4 slot indices for this world, sorted: named stages first, hubs last.
-                var indices = Enumerable.Range(w * 4, 4)
-                    .OrderBy(idx => IsHubStem(stems[idx]) ? 1 : 0)
-                    .ThenBy(idx => idx);
+                // The world's 3 story stages, in map order.
+                var indices = Enumerable.Range(w * 4, 4).Where(idx => !DolPatcherService.IsMiniGameSlot(idx));
 
                 foreach (int idx in indices)
                 {
-                    var slot = new StageSlotViewModel(idx, stems[idx], AllOptions[idx].DisplayLabel, AllOptions, AllOptions[idx]);
+                    var identity = s_optionBySlot[idx];
+                    var slot = new StageSlotViewModel(idx, stems[idx], identity.DisplayLabel, AllOptions, identity);
                     slot.PropertyChanged += (_, _) => OnSlotChanged();
                     group.Stages.Add(slot);
                 }
@@ -98,11 +100,12 @@ namespace FSARandomizer.ViewModels
                         string srcStem = srcValue.StartsWith("boss", StringComparison.OrdinalIgnoreCase)
                             ? srcValue[4..] : srcValue;
                         int srcIdx = Array.IndexOf(stems, srcStem);
-                        slot.SelectedOption = srcIdx >= 0 ? AllOptions[srcIdx] : AllOptions[slot.SlotIndex];
+                        slot.SelectedOption = s_optionBySlot.TryGetValue(srcIdx, out var src)
+                            ? src : s_optionBySlot[slot.SlotIndex];
                     }
                     else
                     {
-                        slot.SelectedOption = AllOptions[slot.SlotIndex]; // identity
+                        slot.SelectedOption = s_optionBySlot[slot.SlotIndex]; // identity
                     }
                 }
             _suppressPendingFlag = false;
@@ -129,7 +132,7 @@ namespace FSARandomizer.ViewModels
             _suppressPendingFlag = true;
             foreach (var group in WorldGroups)
                 foreach (var slot in group.Stages)
-                    slot.SelectedOption = AllOptions[slot.SlotIndex];
+                    slot.SelectedOption = s_optionBySlot[slot.SlotIndex];
             _suppressPendingFlag = false;
             _randVm.StagePlacements = null;
             HasChanges = false;
@@ -146,34 +149,10 @@ namespace FSARandomizer.ViewModels
         private void RefreshHasChanges() =>
             HasChanges = WorldGroups.Any(g => g.Stages.Any(s => s.IsChanged));
 
-        private static bool IsHubStem(string stem)
-        {
-            if (GameData.Levels.TryGetValue(stem, out var info))
-                return string.IsNullOrEmpty(info.SectionLabel);
-            return true; // boss200–207 (not in GameData) are overworld/hub stages
-        }
-
-        internal static string BuildStemLabel(string stem, int slotIndex)
-        {
-            if (GameData.Levels.TryGetValue(stem, out var info))
-            {
-                if (!string.IsNullOrEmpty(info.SectionLabel))
-                    return $"{info.SectionLabel} — {info.Name}  (boss{stem})";
-                // Connector stage with no section number (e.g. boss082)
-                return $"Connector — {info.Name}  (boss{stem})";
-            }
-
-            // Hub stems boss200–207: derive world name from the first named stage in this world.
-            string worldName = "";
-            int worldIdx = slotIndex / 4;
-            var firstStem = DolPatcherService.WorldStems[worldIdx * 4];
-            if (GameData.Levels.TryGetValue(firstStem, out var firstInfo))
-                worldName = firstInfo.WorldName;
-
-            return string.IsNullOrEmpty(worldName)
-                ? $"Overworld  (boss{stem})"
-                : $"Overworld — {worldName}  (boss{stem})";
-        }
+        internal static string BuildStemLabel(string stem) =>
+            GameData.Levels.TryGetValue(stem, out var info)
+                ? $"{info.SectionLabel} — {info.Name}  (boss{stem})"
+                : $"boss{stem}";
     }
 
     public class WorldGroupViewModel
@@ -185,7 +164,7 @@ namespace FSARandomizer.ViewModels
 
     public class StageSlotViewModel : ViewModelBase
     {
-        /// <summary>Position in the WorldStems array (0–31), used to look up the identity option.</summary>
+        /// <summary>Position in the WorldStems array (0–31); identifies the slot and its identity option.</summary>
         public int SlotIndex { get; }
         public string TargetStem { get; }
         public string TargetLabel { get; }

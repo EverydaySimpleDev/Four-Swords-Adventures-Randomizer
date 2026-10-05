@@ -14,6 +14,7 @@ namespace FSARandomizer.Models
     {
         private static readonly Dictionary<string, string> _names = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, List<SchemaField>> _fields = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, string> _categories = new(StringComparer.OrdinalIgnoreCase);
 
         static ActorSchemas()
         {
@@ -37,6 +38,8 @@ namespace FSARandomizer.Models
                     string id = Path.GetFileNameWithoutExtension(file);
                     if (!string.IsNullOrEmpty(schema.Name))
                         _names[id] = schema.Name;
+                    if (!string.IsNullOrEmpty(schema.Category))
+                        _categories[id] = schema.Category;
                     if (schema.Fields?.Count > 0)
                         _fields[id] = schema.Fields;
                 }
@@ -49,6 +52,10 @@ namespace FSARandomizer.Models
 
         public static bool TryGetFields(string actorId, out List<SchemaField> fields)
             => _fields.TryGetValue(actorId, out fields!);
+
+        /// <summary>FSALib category, e.g. "Enemy", "Boss", "Object" (read case-insensitively; FSALib.Assets misses it).</summary>
+        public static string GetCategory(string actorId)
+            => _categories.TryGetValue(actorId, out var c) ? c : "";
 
         public static int LoadedCount => _names.Count;
     }

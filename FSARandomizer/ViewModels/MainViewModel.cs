@@ -1,4 +1,5 @@
 using FSALib.Structs;
+using FSARandomizer.Archive;
 using FSARandomizer.Models;
 using FSARandomizer.Services;
 using Microsoft.Win32;
@@ -269,10 +270,11 @@ namespace FSARandomizer.ViewModels
                                     : shuffleWorlds  ? DolPatcherService.BuildWorldPermutation(dolSeed)
                                     : shuffleStages  ? DolPatcherService.BuildStagePermutation(dolSeed)
                                     : null;
+                var  dolPatches     = RandomizerVm.BuildDolPatches();
                 await Task.Run(() =>
                 {
                     _levelService.ApplyItemLocations(_game, locations);
-                    _levelService.ExportIso(_game, outputPath, levelPerm, progress);
+                    _levelService.ExportIso(_game, outputPath, levelPerm, dolPatches, progress);
                 });
                 _lastExportPath = outputPath;
                 StatusText = $"ISO exported: {Path.GetFileName(outputPath)}";
@@ -319,10 +321,11 @@ namespace FSARandomizer.ViewModels
                                     : shuffleWorlds  ? DolPatcherService.BuildWorldPermutation(dolSeed)
                                     : shuffleStages  ? DolPatcherService.BuildStagePermutation(dolSeed)
                                     : null;
+                var  dolPatches     = RandomizerVm.BuildDolPatches();
                 await Task.Run(() =>
                 {
                     _levelService.ApplyItemLocations(_game, locations);
-                    _levelService.ExportIso(_game, _lastExportPath, levelPerm, progress);
+                    _levelService.ExportIso(_game, _lastExportPath, levelPerm, dolPatches, progress);
                 });
                 StatusText = $"ISO re-exported: {Path.GetFileName(_lastExportPath)}";
                 LogLines.Add(StatusText);

@@ -1,8 +1,0 @@
-{
-  "name": "Phantom Ganon",
-  "description": "Boss fight against the Phantom Ganon.",
-  "InternalName": "ファントムガノン",
-  "category": "Boss",
-  "Resources": ["fganon"],
-  "NoGBASprite": true
-}

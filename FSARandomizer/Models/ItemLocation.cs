@@ -106,7 +106,11 @@ namespace FSARandomizer.Models
         /// </summary>
         public System.Collections.Generic.Dictionary<string, string>? StagePlacements { get; set; }
 
+        // Enemies
+        public bool RandomizeEnemies    { get; set; } = false;
+
         // Starting options
+        public bool SkipIntro           { get; set; } = false;
         public bool StartWithRandomItem { get; set; } = false;
 
         // Goal

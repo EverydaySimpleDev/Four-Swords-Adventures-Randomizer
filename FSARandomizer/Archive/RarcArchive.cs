@@ -1,4 +1,5 @@
-using AuroraLib.Compression.Algorithms;
+using AuroraLib.Compression;
+using AuroraLib.Compression.Formats.Nintendo;
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -18,8 +19,7 @@ namespace FSARandomizer.Archive
 
         private static readonly Yaz0 s_yaz0 = new Yaz0
         {
-            LookAhead = false,
-            FormatByteOrder = AuroraLib.Core.Endian.Big
+            FormatByteOrder = AuroraLib.Core.IO.Endian.Big
         };
 
         // ── Reading ──────────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ namespace FSARandomizer.Archive
             ms.Position = 0;
 
             if (compress)
-                s_yaz0.Compress(ms, dest);
+                s_yaz0.Compress(ms, dest, CompressionSettings.Balanced);
             else
                 ms.CopyTo(dest);
         }

@@ -732,10 +732,28 @@
                                     <StackPanel>
                                         <CheckBox Content="Shuffle World Order"
                                                   IsChecked="{Binding RandomizerVm.ShuffleLevelOrder}"
-                                                  ToolTip="Randomizes which world you play in each world slot. All four stages of a world move together as a group, so you always get a coherent world experience — just in a different order. Mutually exclusive with Shuffle Stage Order. Off by default."/>
+                                                  ToolTip="Randomizes which world you play in each world slot. A world's three story stages move together as a group, so you always get a coherent world experience — just in a different order. Tingle's Tower stays in place. Mutually exclusive with Shuffle Stage Order. Off by default."/>
                                         <CheckBox Content="Shuffle Stage Order"
                                                   IsChecked="{Binding RandomizerVm.ShuffleStageOrder}"
-                                                  ToolTip="Randomizes all 32 individual stages independently. Any stage can end up in any slot, mixing stages freely across worlds. Mutually exclusive with Shuffle World Order. Off by default."/>
+                                                  ToolTip="Randomizes the 24 story stages independently. Any story stage can end up in any story slot, mixing stages freely across worlds. Tingle's Tower stays in place. Mutually exclusive with Shuffle World Order. Off by default."/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Enemies -->
+                                <GroupBox Header="Enemies">
+                                    <StackPanel>
+                                        <CheckBox Content="Randomize Enemies"
+                                                  IsChecked="{Binding RandomizerVm.RandomizeEnemies}"
+                                                  ToolTip="Swaps ordinary enemies in the story stages for other ordinary enemies that can be beaten with the sword alone. Each enemy keeps its spot, so rooms that open after defeating all enemies still work. Bosses, mini-bosses, traps, water and sand enemies, and scripted enemies are never changed. Off by default."/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- Quality of life -->
+                                <GroupBox Header="Quality of Life">
+                                    <StackPanel>
+                                        <CheckBox Content="Skip Intro"
+                                                  IsChecked="{Binding RandomizerVm.SkipIntro}"
+                                                  ToolTip="Skips the opening story sequence, so a new file goes straight to the world map. Applied to the game code when exporting an ISO (USA version). Off by default."/>
                                     </StackPanel>
                                 </GroupBox>
 
@@ -1127,9 +1145,11 @@
                                 <TextBlock Style="{StaticResource HH2}"
                                            Text="Level Order Group"/>
                                 <TextBlock Style="{StaticResource HBody}">Controls whether the order of the game's 32 playable stages is randomized when exporting to ISO. Only one mode can be active at a time — enabling one automatically disables the other.</TextBlock>
-                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle World Order</Bold>  — Shuffles all eight worlds as groups. All four stages belonging to a world always move together, so World 1's slot might contain World 5's stages (5-1, 5-2, 5-3, and 5-hub) as a complete set. The experience within each world remains coherent; only the order you encounter them changes.</TextBlock>
-                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle Stage Order</Bold>  — Shuffles all 32 individual stages independently. Each stage slot can receive any stage from any world, so World 1 could end up containing stages like 5-2, 8-1, and 4-3 from completely different worlds. This is the more chaotic option.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle World Order</Bold>  — Shuffles all eight worlds as groups. The three story stages belonging to a world always move together, so World 1's slot might contain World 5's stages (5-1, 5-2 and 5-3) as a complete set. Tingle's Tower is a side mini-game and is never moved. The experience within each world remains coherent; only the order you encounter them changes.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Shuffle Stage Order</Bold>  — Shuffles the 24 story stages independently (Tingle's Tower is never moved). Each story slot can receive any story stage from any world, so World 1 could end up containing stages like 5-2, 8-1, and 4-3 from completely different worlds. This is the more chaotic option.</TextBlock>
                                 <TextBlock Style="{StaticResource HBody}">Both options work by physically rearranging the level archive files inside the exported ISO. The original disc image is never modified. The seed used for level order is the same seed shown above — changing the seed also changes the level order.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Randomize Enemies</Bold>  — Replaces ordinary enemies in the 24 story stages with random ordinary enemies, such as Octoroks, Keese, soldiers, Stalfos and Wizrobes. Every replacement can be beaten with the sword alone and keeps the original enemy's position, so the number of enemies in each room stays the same. Bosses, mini-bosses (Shadow Link, Gohma), traps, water and sand enemies, and enemies tied to triggers or soldier squads are left as they are. Re-randomizing always starts from the original enemies.</TextBlock>
+                                <TextBlock Style="{StaticResource HBody}"><Bold>Skip Intro</Bold>  — Skips the opening story sequence so a new save file goes straight to the world map. This is a small patch to the game code, applied when exporting an ISO. It only works on the USA version; on any other version the export log shows a warning and the code is left unchanged.</TextBlock>
 
                                 <TextBlock Style="{StaticResource HH2}"
                                            Text="Keys Group"/>
